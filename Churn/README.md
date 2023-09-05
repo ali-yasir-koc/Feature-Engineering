@@ -1,13 +1,13 @@
 # DataScience_Feature-Engineering
 ## Description
 A fictitious telecom company providing home phone and Internet services in California wants to develop a machine learning model that can predict customers who will leave. This project aims to perform the necessary data analysis and feature engineering steps before developing the model. For this purpose, the following steps were followed.
-    1-Understand the structure and overall story of the data
-    2-Detection of outliers
-    3- Detection of missing values and solving the problem
-    4- Encoding operations
-    5- Standardization procedures
-    6-Establishment of the primitive model
-    7-Visualization of feature importance
+- Understand the structure and overall story of the data
+- Detection of outliers
+- Detection of missing values and solving the problem
+- Encoding operations
+- Standardization procedures
+- Establishment of the primitive model
+- Visualization of feature importance
 ## Content
 Telco customer churn data contains information about a fictitious telecom company that provided home phone and Internet services to 7043 customers in California in the third quarter. Which customers left, stayed or signed up for their service shows.
 ## Columns
