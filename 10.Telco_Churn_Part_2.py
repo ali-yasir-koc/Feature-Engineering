@@ -346,6 +346,7 @@ dff.info()
 
 dff.columns = [col.upper() for col in dff.columns]
 
+
 ########################## Standardization ###########################
 standard_cols = [col for col in dff.columns if dff[col].dtype in ["float64"]]
 dff[standard_cols].head()
@@ -354,6 +355,7 @@ ss = StandardScaler()
 for col in standard_cols:
     dff[col] = ss.fit_transform(dff[[col]])
 dff.head()
+
 
 ########################## Basic Model ###########################
 y = dff["CHURN"]
@@ -364,3 +366,20 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.30, rand
 rf_model = RandomForestClassifier(random_state = 46).fit(X_train, y_train)
 y_pred = rf_model.predict(X_test)
 accuracy_score(y_pred, y_test)
+
+
+########################## Feature Importances ###########################
+def plot_importance(model, features, num = len(X), save = False):
+    feature_imp = pd.DataFrame({'Value': model.feature_importances_, 'Feature': features.columns})
+    plt.figure(figsize = (10, 10))
+    sns.set(font_scale = 1)
+    sns.barplot(x = "Value", y = "Feature", data = feature_imp.sort_values(by = "Value",
+                                                                           ascending = False)[0:num])
+    plt.title('Features')
+    plt.tight_layout()
+    plt.show()
+    if save:
+        plt.savefig('importances.png')
+
+
+plot_importance(rf_model, X_train)
