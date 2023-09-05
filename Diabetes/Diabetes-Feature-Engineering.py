@@ -1,5 +1,5 @@
 ########################## DIABETES -- FEATURING ENGINEERING   ###########################
-# This project includes feature engineering operations, which is the first step in developing a machine learning model.
+# This project involves feature engineering, one of the first steps in developing a machine learning model.
 # It is aimed to establish a model that can predict whether people have diabetes
 # when their characteristics are specified.
 # The dataset is part of the large dataset held at the National Institutes of Diabetes-Digestive-Kidney Diseases
@@ -30,17 +30,38 @@ pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
 
 ########################## Loading  The Date  ###########################
-def load_data(dataname):
-    return pd.read_csv(dataname)
+def load_data(dataframe):
+    return pd.read_csv(dataframe)
 
 
 diabetes = load_data("diabetes_miuul.csv")
 df = diabetes.copy()
 df.head()
 
+
+########################## Summary of  The Data  ###########################
+def columns_info(dataframe):
+    columns, dtypes, unique, nunique, nulls = [], [], [], [], []
+
+    for cols in dataframe.columns:
+        columns.append(cols)
+        dtypes.append(dataframe[cols].dtype)
+        unique.append(dataframe[cols].unique())
+        nunique.append(dataframe[cols].nunique())
+        nulls.append(dataframe[cols].isnull().sum())
+
+    return pd.DataFrame({"Columns": columns,
+                         "Data_Type": dtypes,
+                         "Unique_Values": unique,
+                         "Number_of_Unique": nunique,
+                         "Missing_Values": nulls})
+
+
+columns_info(df)
+
+
 ########################## Grab to Columns ###########################
 df.columns = [col.upper() for col in df.columns]
-
 
 def grab_col_names(dataframe, cat_th = 10, car_th = 20):
     """
@@ -105,18 +126,33 @@ def grab_col_names(dataframe, cat_th = 10, car_th = 20):
 
 cat_cols, num_cols, cat_but_car = grab_col_names(df)
 
+df[cat_cols].head()
+df[num_cols].head()
 
-########################## Outlier Analysis  ###########################
-df.isnull().sum()
 
-# Logically, these columns cannot take the value 0.
+########################## Structural Changes   ###########################
 df[['GLUCOSE', 'BLOODPRESSURE', 'SKINTHICKNESS', 'INSULIN', 'BMI']] = df[
     ['GLUCOSE', 'BLOODPRESSURE', 'SKINTHICKNESS', 'INSULIN', 'BMI']].replace(0, np.NaN, )
+# Logically, these columns cannot take the value 0.
 
 df.isnull().sum()
 
 
+########################## Outlier Analysis  ###########################
 def outlier_thresholds(dataframe, col_name, q1 = 0.10, q3 = 0.90):
+    """
+    This function determines the upper and lower limits of the outlier for the desired column.
+    Parameters
+    ----------
+    dataframe
+    col_name
+    q1 : lower limit
+    q3 : upper limit
+
+    Returns
+    -------
+    lower limit for columns, upper limit for columns
+    """
     quartile1 = dataframe[col_name].quantile(q1)
     quartile3 = dataframe[col_name].quantile(q3)
     interquantile_range = quartile3 - quartile1
@@ -126,6 +162,18 @@ def outlier_thresholds(dataframe, col_name, q1 = 0.10, q3 = 0.90):
 
 
 def check_outlier(dataframe, col_name):
+    """
+     This function checks whether there is an outlier in this column according to
+     the outlier lower and upper limits for the desired column.
+     Parameters
+     ----------
+     dataframe
+     col_name
+
+     Returns
+     -------
+     True or False
+     """
     low_limit, up_limit = outlier_thresholds(dataframe, col_name)
     if dataframe[(dataframe[col_name] > up_limit) | (dataframe[col_name] < low_limit)].any(axis = None):
         return True
@@ -138,6 +186,19 @@ for col in num_cols:
 
 
 def grab_outliers(dataframe, col_name, index = False):
+    """
+    It is a function that returns the first 5 rows of the columns with outliers.
+
+    Parameters
+    ----------
+    dataframe
+    col_name
+    index : parameter whether to save the indexes of outliers
+
+    Returns
+    -------
+
+    """
     low, up = outlier_thresholds(dataframe, col_name)
 
     if dataframe[((dataframe[col_name] < low) | (dataframe[col_name] > up))].shape[0] > 10:
@@ -155,6 +216,18 @@ for col in num_cols:
 
 
 def replace_with_thresholds(dataframe, variable):
+    """
+    It is the function that changes the outliers of the columns with lower and upper limits.
+
+    Parameters
+    ----------
+    dataframe
+    variable : columns
+
+    Returns
+    -------
+
+    """
     low_limit, up_limit = outlier_thresholds(dataframe, variable)
     dataframe.loc[(dataframe[variable] < low_limit), variable] = low_limit
     dataframe.loc[(dataframe[variable] > up_limit), variable] = up_limit
@@ -169,6 +242,20 @@ for col in num_cols:
 
 ########################## Missing Value Analysis ###########################
 def missing_values_table(dataframe, na_name = False):
+    """
+    This function selects columns containing NA.
+    Shows the number of NAs in these columns and their proportion in the total data.
+    If requested, calls the names of columns containing NA.
+
+    Parameters
+    ----------
+    dataframe
+    na_name
+
+    Returns
+    -------
+
+    """
     na_columns = [col for col in dataframe.columns if dataframe[col].isnull().sum() > 0]
 
     n_miss = dataframe[na_columns].isnull().sum().sort_values(ascending = False)
@@ -221,7 +308,6 @@ col_too_nulls = ["INSULIN", "SKINTHICKNESS"]
 
 def too_null_filling(dataframe, col_list):
     """
-
     This is a function that fills variables with many missing values
     with the median of that variable relative to the target and a random noise.
 
@@ -249,9 +335,13 @@ too_null_filling(df, col_too_nulls)
 
 df.isnull().sum()
 
-########################## Feature Engineering  ###########################
-NewBMI = pd.Series(["Underweight", "Normal", "Overweight", "Obesity 1", "Obesity 2", "Obesity 3"], dtype = "category")
+df_temp = df.copy()
 
+
+########################## Feature Engineering  ###########################
+""" 1 """
+# Body mass index levels
+NewBMI = pd.Series(["Underweight", "Normal", "Overweight", "Obesity 1", "Obesity 2", "Obesity 3"], dtype = "category")
 df["NEW_BMI"] = np.where(df["BMI"] > 39.9, "Obesity 3",
                          np.where(df["BMI"] > 34.9, "Obesity 2",
                                   np.where(df["BMI"] > 29.9, "Obesity 1",
@@ -260,12 +350,19 @@ df["NEW_BMI"] = np.where(df["BMI"] > 39.9, "Obesity 3",
 
 df.head()
 
+""" 2 """
+# Glucose Levels
 NewGlucose = pd.Series(["Normal", "Pre_Diabetes", "Diabetes"], dtype = "category")
 df["NEW_GLUCOSE"] = np.where(df["GLUCOSE"] > 200, "Diabetes",
                              np.where(df["GLUCOSE"] > 140, "Pre_Diabetes", "Normal"))
 
 df.head()
 
+# Convert glucose value to a categorical variable
+# df["NEW_GLUCOSE"] = pd.cut(x=df["Glucose"], bins=[0, 140, 200, 300], labels=["Normal", "Prediabetes", "Diabetes"])
+
+""" 3 """
+# Blood Pressure Categories
 NewBloodPressure = pd.Series(["Hypotension", "Normal", "Pre_hypertension",
                               "Hypertension_1", "Hypertension_2", "Hypertensive_Crisis"], dtype = "category")
 
@@ -276,21 +373,63 @@ df["NEW_BLOODPRESSURE"] = np.where(df["BLOODPRESSURE"] >= 100, "Hypertension_2",
 
 df.head()
 
+""" 4 """
+# Insulin levels
 df["NEW_INSULIN_SCORE"] = np.where((df["INSULIN"] >= 16) & (df["INSULIN"] <= 166), "Normal", "Abnormal")
 
 df.head()
 
+""" 5 """
+# Senior or not
+df["SENIOR"] = np.where(df["AGE"] >= 50, 1, 0)
+
+df.head()
+
+""" 6 """
+# Age Levels
 bins = [20, 25, 30, 40, 50, df["AGE"].max()]
-df["AGE_SEGMENT"] = pd.cut(df["AGE"], bins, labels = ["Young", "Young+", "Middle", "Older-", "Older"])
-df["NEW_AGE_SEGMENT"] = pd.qcut(df["AGE"], 5)
+df["NEW_AGE_SEGMENT"] = pd.cut(df["AGE"], bins, labels = ["Young", "Young+", "Middle", "Older-", "Older"])
 
 
+df.head()
+
+""" 7 """
+# Skin Thickness Levels
 bins_2 = [0, 25, 30, 35, 40, df["SKINTHICKNESS"].max()]
-df["SKINTHICKNESS_LEVEL"] = pd.cut(df["SKINTHICKNESS"], bins_2, labels = ["E", "D", "C", "B", "A"])
-df["NEW_SKINTHICKNESS_LEVEL"] = pd.qcut(df["SKINTHICKNESS"], 5)
+df["NEW_SKINTHICKNESS_LEVEL"] = pd.cut(df["SKINTHICKNESS"], bins_2, labels = ["E", "D", "C", "B", "A"])
 
 
+df.head()
+
+""" 8 """
+# Age according to pregnancy
 df["PREGNANCIES_AGE_RATE"] = df["PREGNANCIES"] / df["AGE"]
+
+df.head()
+
+""" 9 """
+# Creating a categorical variable by considering age and body mass index together produced three breakdowns
+df.loc[(df["BMI"] < 18.5) & (df["SENIOR"] == 0), "NEW_AGE_BMI_NOM"] = "underweightmature"
+df.loc[(df["BMI"] < 18.5) & (df["SENIOR"] == 1), "NEW_AGE_BMI_NOM"] = "underweightsenior"
+df.loc[((df["BMI"] >= 18.5) & (df["BMI"] < 24.9)) & (df["SENIOR"] == 0), "NEW_AGE_BMI_NOM"] = "healthymature"
+df.loc[((df["BMI"] >= 18.5) & (df["BMI"] < 24.9)) & (df["SENIOR"] == 1), "NEW_AGE_BMI_NOM"] = "healthysenior"
+df.loc[((df["BMI"] >= 24.9) & (df["BMI"] < 29.9)) & (df["SENIOR"] == 0), "NEW_AGE_BMI_NOM"] = "overweightmature"
+df.loc[((df["BMI"] >= 24.9) & (df["BMI"] < 29.9)) & (df["SENIOR"] == 1), "NEW_AGE_BMI_NOM"] = "overweightsenior"
+df.loc[(df["BMI"] >= 29.9) & (df["SENIOR"] == 0), "NEW_AGE_BMI_NOM"] = "obesemature"
+df.loc[(df["BMI"] >= 29.9) & (df["SENIOR"] == 1), "NEW_AGE_BMI_NOM"] = "obesesenior"
+
+df.head()
+
+""" 10 """
+# Glucose and pregnancy multiplication
+df["NEW_GLUCO_PREGNANCIES"] = df["GLUCOSE"] * df["PREGNANCIES"]
+
+df.head()
+
+""" 11 """
+# Glucose rate according to age
+df["NEW_GLUCO_AGE"] = df["GLUCOSE"] / df["AGE"]
+
 df.head()
 
 
@@ -302,6 +441,8 @@ def label_encoder(dataframe, binary_col):
 
 
 bin_cols = [col for col in df.columns if df[col].nunique() == 2 and df[col].dtype not in ["int64", "float64", "int32"]]
+
+df[bin_cols].head()
 
 for col in bin_cols:
     label_encoder(df, col)
@@ -322,6 +463,7 @@ rare_analyser(df, "OUTCOME", new_cat_col)
 
 ########################## One-Hot Encoding  ###########################
 ohe_cols = [col for col in df.columns if 14 >= df[col].nunique() > 2 and df[col].dtype in ["object", "category"]]
+df[ohe_cols].head()
 
 def one_hot_encoder(dataframe, categorical_cols, drop_first = True):
     dataframe = pd.get_dummies(dataframe, columns = categorical_cols, drop_first = drop_first)
@@ -329,10 +471,12 @@ def one_hot_encoder(dataframe, categorical_cols, drop_first = True):
 
 
 dff = one_hot_encoder(df, ohe_cols)
+# Type and size check for newly created dataframe
 dff.head()
 df.shape
 dff.shape
 dff.columns = [col.upper() for col in dff.columns]
+
 cat_cols, num_cols, cat_but_car = grab_col_names(dff)
 rare_analyser(dff, "OUTCOME", cat_cols[1:])
 useless_cols = [col for col in dff.columns if dff[col].nunique() == 2 and
@@ -344,10 +488,11 @@ dff.drop(useless_cols, axis = 1, inplace = True)
 ss = StandardScaler()
 for col in num_cols:
     dff[col] = ss.fit_transform(dff[[col]])
+
 dff.head()
 
 
-########################## Model ###########################
+########################## Basic Model ###########################
 y = dff["OUTCOME"]
 X = dff.drop(["OUTCOME"], axis = 1)
 
